@@ -79,27 +79,27 @@
             <div class="h-80 flex items-end justify-between">
                 <div class="w-full h-full flex items-end justify-between space-x-2">
                     <div class="flex-1 flex flex-col items-center">
-                        <div class="w-full h-24 bg-indigo-100 rounded-t-lg"></div>
+                        <div class="w-full h-24 bg-emerald-600 rounded-t-lg"></div>
                         <p class="text-xs text-gray-600 mt-2">Jan</p>
                     </div>
                     <div class="flex-1 flex flex-col items-center">
-                        <div class="w-full h-32 bg-indigo-200 rounded-t-lg"></div>
+                        <div class="w-full h-32 bg-emerald-600 rounded-t-lg"></div>
                         <p class="text-xs text-gray-600 mt-2">Feb</p>
                     </div>
                     <div class="flex-1 flex flex-col items-center">
-                        <div class="w-full h-40 bg-indigo-300 rounded-t-lg"></div>
+                        <div class="w-full h-40 bg-emerald-600 rounded-t-lg"></div>
                         <p class="text-xs text-gray-600 mt-2">Mar</p>
                     </div>
                     <div class="flex-1 flex flex-col items-center">
-                        <div class="w-full h-36 bg-indigo-200 rounded-t-lg"></div>
+                        <div class="w-full h-36 bg-emerald-600 rounded-t-lg"></div>
                         <p class="text-xs text-gray-600 mt-2">Apr</p>
                     </div>
                     <div class="flex-1 flex flex-col items-center">
-                        <div class="w-full h-48 bg-indigo-400 rounded-t-lg"></div>
+                        <div class="w-full h-48 bg-emerald-600 rounded-t-lg"></div>
                         <p class="text-xs text-gray-600 mt-2">May</p>
                     </div>
                     <div class="flex-1 flex flex-col items-center">
-                        <div class="w-full h-44 bg-indigo-300 rounded-t-lg"></div>
+                        <div class="w-full h-44 bg-emerald-600 rounded-t-lg"></div>
                         <p class="text-xs text-gray-600 mt-2">Jun</p>
                     </div>
                 </div>
