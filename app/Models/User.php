@@ -3,13 +3,14 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -56,9 +57,13 @@ class User extends Authenticatable
         return $this->hasMany(Page::class);
     }
 
+    /**
+     * Transactions on this user's pages (via page_id). Use this for revenue;
+     * transactions.user_id is not set on create.
+     */
     public function transactions()
     {
-        return $this->hasMany(Transaction::class);
+        return $this->hasManyThrough(Transaction::class, Page::class);
     }
 
     public function paymentGateways()

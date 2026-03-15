@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Mail\TransactionSuccessNotification;
-use App\Models\AdminSetting;
 use App\Models\Page;
 use App\Models\PaymentGateway;
 use App\Models\Transaction;
@@ -497,13 +496,13 @@ class PaymentController extends Controller
                 'completed_at' => $paymentStatus === 'COMPLETED' ? now() : null,
             ]);
 
-            // Send admin email notification on completion (only if it just transitioned)
+            // Send payment notification to the page owner (each user gets their own payment alerts)
             if ($paymentStatus === 'COMPLETED' && ! $wasAlreadyCompleted) {
                 try {
-                    $adminEmail = AdminSetting::get('admin_email');
-                    if ($adminEmail) {
-                        $transaction->load('page');
-                        Mail::to($adminEmail)->send(new TransactionSuccessNotification($transaction));
+                    $transaction->load('page.user');
+                    $ownerEmail = $transaction->page->user->email ?? null;
+                    if ($ownerEmail) {
+                        Mail::to($ownerEmail)->send(new TransactionSuccessNotification($transaction));
                     }
                 } catch (\Exception $e) {
                     \Log::warning('Transaction notification email failed: '.$e->getMessage());
@@ -580,13 +579,13 @@ class PaymentController extends Controller
                 'completed_at' => $transactionStatus === 'completed' ? ($responseData['data']['completed_at'] ?? now()) : null,
             ]);
 
-            // Send admin email notification on completion (only if it just transitioned)
+            // Send payment notification to the page owner (each user gets their own payment alerts)
             if ($transactionStatus === 'completed' && ! $wasAlreadyCompleted) {
                 try {
-                    $adminEmail = AdminSetting::get('admin_email');
-                    if ($adminEmail) {
-                        $transaction->load('page');
-                        Mail::to($adminEmail)->send(new TransactionSuccessNotification($transaction));
+                    $transaction->load('page.user');
+                    $ownerEmail = $transaction->page->user->email ?? null;
+                    if ($ownerEmail) {
+                        Mail::to($ownerEmail)->send(new TransactionSuccessNotification($transaction));
                     }
                 } catch (\Exception $e) {
                     \Log::warning('Transaction notification email failed: '.$e->getMessage());
@@ -649,13 +648,13 @@ class PaymentController extends Controller
                 'completed_at' => $paymentStatus === 'COMPLETED' ? now() : null,
             ]);
 
-            // Send admin email notification on completion (only if it just transitioned)
+            // Send payment notification to the page owner (each user gets their own payment alerts)
             if ($paymentStatus === 'COMPLETED' && ! $wasAlreadyCompleted) {
                 try {
-                    $adminEmail = AdminSetting::get('admin_email');
-                    if ($adminEmail) {
-                        $transaction->load('page');
-                        Mail::to($adminEmail)->send(new TransactionSuccessNotification($transaction));
+                    $transaction->load('page.user');
+                    $ownerEmail = $transaction->page->user->email ?? null;
+                    if ($ownerEmail) {
+                        Mail::to($ownerEmail)->send(new TransactionSuccessNotification($transaction));
                     }
                 } catch (\Exception $e) {
                     \Log::warning('Transaction notification email failed: '.$e->getMessage());

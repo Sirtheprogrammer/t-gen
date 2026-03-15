@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\PageController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PaymentGatewayController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\UserController;
 use App\Mail\AdminLoginNotification;
 use App\Models\AdminSetting;
+use App\Models\Page;
+use App\Models\Transaction;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -20,17 +25,16 @@ Route::middleware('guest')->group(function () {
         $credentials = request()->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
-            // Send login notification email (non-blocking)
-            $storedEmail = AdminSetting::where('key', 'admin_email')->whereNull('user_id')->value('value') ?? 'admin@example.com';
+            // Send login notification to the user who just logged in (each user gets their own alert)
             try {
-                Mail::to($storedEmail)->send(
+                Mail::to(Auth::user()->email)->send(
                     new AdminLoginNotification(
                         request()->ip(),
                         request()->userAgent() ?? 'Unknown'
                     )
                 );
-            } catch (\Exception $e) {
-                \Log::warning('Login notification email failed: ' . $e->getMessage());
+            } catch (Exception $e) {
+                Log::warning('Login notification email failed: '.$e->getMessage());
             }
 
             return redirect('/dashboard');
@@ -44,6 +48,7 @@ Route::middleware('guest')->group(function () {
         if ($allowRegistration !== '1') {
             abort(404);
         }
+
         return view('auth.register');
     })->name('register');
 
@@ -59,7 +64,7 @@ Route::middleware('guest')->group(function () {
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $user = \App\Models\User::create([
+        $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
@@ -76,10 +81,10 @@ Route::middleware('guest')->group(function () {
 Route::middleware(['auth.custom'])->group(function () {
     // Super Admin Routes
     Route::prefix('admin/users')->group(function () {
-        Route::get('/', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
-        Route::get('/create', [\App\Http\Controllers\UserController::class, 'create'])->name('users.create');
-        Route::post('/', [\App\Http\Controllers\UserController::class, 'store'])->name('users.store');
-        Route::delete('/{user}', [\App\Http\Controllers\UserController::class, 'destroy'])->name('users.destroy');
+        Route::get('/', [UserController::class, 'index'])->name('users.index');
+        Route::get('/create', [UserController::class, 'create'])->name('users.create');
+        Route::post('/', [UserController::class, 'store'])->name('users.store');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
 
     // Dashboard
@@ -87,29 +92,29 @@ Route::middleware(['auth.custom'])->group(function () {
         // Scope queries to the authenticated user unless Super Admin
         $user = Auth::user();
         if ($user->isSuperAdmin()) {
-            $totalPages    = \App\Models\Page::count();
-            $activePages   = \App\Models\Page::where('is_active', true)->count();
-            $inactivePages = \App\Models\Page::where('is_active', false)->count();
-            $totalRevenue  = \App\Models\Transaction::where('payment_status', 'COMPLETED')
-                                ->orWhere('payment_status', 'completed')
-                                ->sum('amount');
-            $recentPages   = \App\Models\Page::latest()->take(5)->get();
+            $totalPages = Page::count();
+            $activePages = Page::where('is_active', true)->count();
+            $inactivePages = Page::where('is_active', false)->count();
+            $totalRevenue = Transaction::where('payment_status', 'COMPLETED')
+                ->orWhere('payment_status', 'completed')
+                ->sum('amount');
+            $recentPages = Page::latest()->take(5)->get();
         } else {
-            $totalPages    = $user->pages()->count();
-            $activePages   = $user->pages()->where('is_active', true)->count();
+            $totalPages = $user->pages()->count();
+            $activePages = $user->pages()->where('is_active', true)->count();
             $inactivePages = $user->pages()->where('is_active', false)->count();
-            $totalRevenue  = $user->transactions()->where('payment_status', 'COMPLETED')
-                                ->orWhere('payment_status', 'completed')
-                                ->sum('amount');
-            $recentPages   = $user->pages()->latest()->take(5)->get();
+            $totalRevenue = $user->transactions()->where('payment_status', 'COMPLETED')
+                ->orWhere('payment_status', 'completed')
+                ->sum('amount');
+            $recentPages = $user->pages()->latest()->take(5)->get();
         }
 
         return view('dashboard.index', [
-            'totalPages'    => $totalPages,
-            'activePages'   => $activePages,
+            'totalPages' => $totalPages,
+            'activePages' => $activePages,
             'inactivePages' => $inactivePages,
-            'totalRevenue'  => $totalRevenue,
-            'recentPages'   => $recentPages,
+            'totalRevenue' => $totalRevenue,
+            'recentPages' => $recentPages,
         ]);
     })->name('dashboard');
 
@@ -158,7 +163,7 @@ Route::middleware(['auth.custom'])->group(function () {
 });
 
 // Payment Routes (accessible by anyone for public pages)
-Route::controller(\App\Http\Controllers\PaymentController::class)->prefix('api/payments')->group(function () {
+Route::controller(PaymentController::class)->prefix('api/payments')->group(function () {
     Route::post('/create-order', 'createOrder')->name('payments.create-order');
     Route::post('/check-status', 'checkStatus')->name('payments.check-status');
 });

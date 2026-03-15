@@ -10,8 +10,8 @@
         .card { background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
         .header { background: linear-gradient(135deg, #16a34a, #22c55e); padding: 36px 40px; text-align: center; }
         .header h1 { color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; }
-        .header p { color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px; }
-        .icon { font-size: 40px; margin-bottom: 12px; }
+        .header p { color: rgba(255,255,255,0.9); margin: 8px 0 0; font-size: 14px; }
+        .header .icon-wrap { display: inline-block; width: 48px; height: 48px; background: rgba(255,255,255,0.2); border-radius: 12px; margin-bottom: 12px; }
         .amount-banner { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; text-align: center; padding: 24px; margin: 28px 0; }
         .amount-banner .label { font-size: 13px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 6px; }
         .amount-banner .amount { font-size: 36px; font-weight: 800; color: #15803d; margin: 0; letter-spacing: -1px; }
@@ -30,8 +30,12 @@
 <div class="wrapper">
     <div class="card">
         <div class="header">
-            <div class="icon">💰</div>
-            <h1>New Payment Received!</h1>
+            <div class="icon-wrap">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin: 10px;">
+                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+            </div>
+            <h1>New Payment Received</h1>
             <p>A customer has completed a payment on your page</p>
         </div>
         <div class="body">
@@ -62,7 +66,7 @@
                 </tr>
                 <tr>
                     <td class="label">Status</td>
-                    <td class="value"><span class="badge">✓ COMPLETED</span></td>
+                    <td class="value"><span class="badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: -2px; margin-right: 4px; display: inline-block;"><path d="M20 6L9 17l-5-5"/></svg>COMPLETED</span></td>
                 </tr>
                 <tr>
                     <td class="label">Time</td>
