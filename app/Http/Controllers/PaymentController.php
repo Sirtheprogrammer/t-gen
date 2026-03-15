@@ -17,6 +17,8 @@ class PaymentController extends Controller
 
     private const SNIPPE_API_URL = 'https://api.snippe.sh/v1';
 
+    private const FASTLIPA_API_URL = 'https://api.fastlipa.com/api';
+
     /**
      * Create a payment order with gateway (SonicPesa or Snippe).
      * POST /api/payments/create-order
@@ -49,6 +51,8 @@ class PaymentController extends Controller
             return $this->createSonicPesaOrder($page, $phone, $validated);
         } elseif ($gateway === 'snippe') {
             return $this->createSnippeOrder($page, $phone, $validated);
+        } elseif ($gateway === 'fastlipa') {
+            return $this->createFastLipaOrder($page, $phone, $validated);
         }
 
         return response()->json([
@@ -62,13 +66,22 @@ class PaymentController extends Controller
      */
     private function createSonicPesaOrder(Page $page, string $phone, array $data)
     {
-        // Get SonicPesa gateway config from database
-        $gatewayConfig = PaymentGateway::where('name', 'sonicpesa')->first();
+        // Get SonicPesa gateway admin config
+        $globalGateway = PaymentGateway::whereNull('user_id')->where('name', 'sonicpesa')->first();
 
-        if (! $gatewayConfig || ! $gatewayConfig->is_active) {
+        if (! $globalGateway || ! $globalGateway->is_active) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'SonicPesa gateway is not configured or inactive.',
+                'message' => 'SonicPesa gateway is not active on the platform.',
+            ], 400);
+        }
+
+        $userGateway = PaymentGateway::where('user_id', $page->user_id)->where('name', 'sonicpesa')->first();
+
+        if (! $userGateway || empty($userGateway->api_key)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'The page owner has not configured their SonicPesa API key.',
             ], 400);
         }
 
@@ -86,9 +99,9 @@ class PaymentController extends Controller
         ]);
 
         try {
-            // Call SonicPesa API using the admin-configured API key
+            // Call SonicPesa API using the user-configured API key
             $response = Http::withHeaders([
-                'X-API-KEY' => $gatewayConfig->api_key,
+                'X-API-KEY' => $userGateway->api_key,
             ])->post(self::SONICPESA_API_URL.'/create_order', [
                 'buyer_email' => $transaction->buyer_email,
                 'buyer_name'  => $transaction->buyer_name,
@@ -158,13 +171,22 @@ class PaymentController extends Controller
      */
     private function createSnippeOrder(Page $page, string $phone, array $data)
     {
-        // Get Snippe gateway config from database
-        $gatewayConfig = PaymentGateway::where('name', 'snippe')->first();
+        // Get Snippe gateway admin config
+        $globalGateway = PaymentGateway::whereNull('user_id')->where('name', 'snippe')->first();
 
-        if (! $gatewayConfig || ! $gatewayConfig->is_active) {
+        if (! $globalGateway || ! $globalGateway->is_active) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Snippe gateway is not configured or inactive.',
+                'message' => 'Snippe gateway is not active on the platform.',
+            ], 400);
+        }
+
+        $userGateway = PaymentGateway::where('user_id', $page->user_id)->where('name', 'snippe')->first();
+
+        if (! $userGateway || empty($userGateway->api_key)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'The page owner has not configured their Snippe API key.',
             ], 400);
         }
 
@@ -185,13 +207,13 @@ class PaymentController extends Controller
         ]);
 
         try {
-            // Call Snippe API using the admin-configured API key
+            // Call Snippe API using the user-configured API key
             $nameParts = explode(' ', $transaction->buyer_name);
             $firstName = $nameParts[0] ?? 'Customer';
             $lastName  = count($nameParts) > 1 ? implode(' ', array_slice($nameParts, 1)) : 'User';
 
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer '.$gatewayConfig->api_key,
+                'Authorization' => 'Bearer '.$userGateway->api_key,
             ])->post(self::SNIPPE_API_URL.'/payments', [
                 'payment_type' => 'mobile',
                 'details'      => [
@@ -204,7 +226,7 @@ class PaymentController extends Controller
                     'lastname'  => $lastName,
                     'email'     => $transaction->buyer_email,
                 ],
-                'webhook_url' => $gatewayConfig->webhook_url ?? 'https://example.com/webhook',
+                'webhook_url' => $userGateway->webhook_url ?? 'https://example.com/webhook',
                 'metadata'    => [
                     'order_id' => $orderId,
                 ],
@@ -256,6 +278,104 @@ class PaymentController extends Controller
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Error creating payment order: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Create a FastLipa payment order
+     */
+    private function createFastLipaOrder(Page $page, string $phone, array $data)
+    {
+        // Check platform-global FastLipa activation
+        $globalGateway = PaymentGateway::whereNull('user_id')->where('name', 'fastlipa')->first();
+
+        if (! $globalGateway || ! $globalGateway->is_active) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'FastLipa gateway is not active on the platform.',
+            ], 400);
+        }
+
+        $userGateway = PaymentGateway::where('user_id', $page->user_id)->where('name', 'fastlipa')->first();
+
+        if (! $userGateway || empty($userGateway->api_key)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'The page owner has not configured their FastLipa API key.',
+            ], 400);
+        }
+
+        // Create pending transaction record first
+        $transaction = Transaction::create([
+            'page_id'        => $page->id,
+            'buyer_email'    => $data['buyer_email'] ?? 'customer@example.com',
+            'buyer_name'     => $data['buyer_name'] ?? 'Customer',
+            'buyer_phone'    => $phone,
+            'amount'         => $page->price,
+            'currency'       => 'TZS',
+            'gateway'        => 'fastlipa',
+            'payment_status' => 'PENDING',
+            'order_id'       => 'pending_'.time(),
+        ]);
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer '.$userGateway->api_key,
+                'Content-Type'  => 'application/json',
+            ])->post(self::FASTLIPA_API_URL.'/create-transaction', [
+                'number' => $phone,
+                'amount' => (int) $page->price,
+                'name'   => $transaction->buyer_name,
+            ]);
+
+            if ($response->failed()) {
+                $transaction->update(['payment_status' => 'FAILED']);
+
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Failed to create FastLipa payment order',
+                    'error'   => $response->json('message'),
+                ], 400);
+            }
+
+            $responseData = $response->json();
+
+            if (($responseData['status'] ?? '') !== 'success') {
+                $transaction->update(['payment_status' => 'FAILED']);
+
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => $responseData['message'] ?? 'FastLipa order creation failed',
+                ], 400);
+            }
+
+            // FastLipa returns tranID as the transaction identifier for status checks
+            $tranId = $responseData['data']['tranID'];
+
+            $transaction->update([
+                'order_id'       => $tranId,
+                'reference'      => $tranId,
+                'payment_status' => $responseData['data']['payment_status'] ?? 'PENDING',
+                'response_data'  => $responseData,
+            ]);
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Payment order created successfully',
+                'data'    => [
+                    'transaction_id' => $transaction->id,
+                    'order_id'       => $tranId,
+                    'amount'         => $responseData['data']['amount'],
+                    'currency'       => 'TZS',
+                ],
+            ]);
+        } catch (\Exception $e) {
+            $transaction->update(['payment_status' => 'FAILED']);
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Error creating FastLipa payment order: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -315,6 +435,8 @@ class PaymentController extends Controller
             return $this->checkSonicPesaStatus($transaction);
         } elseif ($gateway === 'snippe') {
             return $this->checkSnippeStatus($transaction);
+        } elseif ($gateway === 'fastlipa') {
+            return $this->checkFastLipaStatus($transaction);
         }
 
         return response()->json([
@@ -328,19 +450,19 @@ class PaymentController extends Controller
      */
     private function checkSonicPesaStatus(Transaction $transaction)
     {
-        // Get SonicPesa gateway config from database
-        $gatewayConfig = PaymentGateway::where('name', 'sonicpesa')->first();
+        $transaction->load('page');
+        $userGateway = PaymentGateway::where('user_id', $transaction->page->user_id)->where('name', 'sonicpesa')->first();
 
-        if (! $gatewayConfig) {
+        if (! $userGateway || empty($userGateway->api_key)) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'SonicPesa gateway is not configured.',
+                'message' => 'SonicPesa API key not found for the page owner.',
             ], 400);
         }
 
         try {
             $response = Http::withHeaders([
-                'X-API-KEY' => $gatewayConfig->api_key,
+                'X-API-KEY' => $userGateway->api_key,
             ])->post(self::SONICPESA_API_URL.'/order_status', [
                 'order_id' => $transaction->order_id,
             ]);
@@ -406,19 +528,19 @@ class PaymentController extends Controller
      */
     private function checkSnippeStatus(Transaction $transaction)
     {
-        // Get Snippe gateway config from database
-        $gatewayConfig = PaymentGateway::where('name', 'snippe')->first();
+        $transaction->load('page');
+        $userGateway = PaymentGateway::where('user_id', $transaction->page->user_id)->where('name', 'snippe')->first();
 
-        if (! $gatewayConfig) {
+        if (! $userGateway || empty($userGateway->api_key)) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Snippe gateway is not configured.',
+                'message' => 'Snippe API key not found for the page owner.',
             ], 400);
         }
 
         try {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer '.$gatewayConfig->api_key,
+                'Authorization' => 'Bearer '.$userGateway->api_key,
             ])->get(self::SNIPPE_API_URL.'/payments/'.$transaction->reference);
 
             if ($response->failed()) {
@@ -480,6 +602,74 @@ class PaymentController extends Controller
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Error checking payment status: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Check FastLipa payment status
+     */
+    private function checkFastLipaStatus(Transaction $transaction)
+    {
+        $transaction->load('page');
+        $userGateway = PaymentGateway::where('user_id', $transaction->page->user_id)->where('name', 'fastlipa')->first();
+
+        if (! $userGateway || empty($userGateway->api_key)) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'FastLipa API key not found for the page owner.',
+            ], 400);
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer '.$userGateway->api_key,
+            ])->get(self::FASTLIPA_API_URL.'/status-transaction', [
+                'tranid' => $transaction->order_id,
+            ]);
+
+            if ($response->failed()) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Failed to check FastLipa payment status',
+                ], 400);
+            }
+
+            $responseData = $response->json();
+
+            // Check if already completed to avoid duplicate emails
+            $wasAlreadyCompleted = strtoupper($transaction->payment_status) === 'COMPLETED';
+
+            $paymentStatus = strtoupper($responseData['payment_status'] ?? 'PENDING');
+
+            $transaction->update([
+                'payment_status' => $paymentStatus,
+                'response_data'  => $responseData,
+                'completed_at'   => $paymentStatus === 'COMPLETED' ? now() : null,
+            ]);
+
+            // Send admin email notification on completion (only if it just transitioned)
+            if ($paymentStatus === 'COMPLETED' && ! $wasAlreadyCompleted) {
+                try {
+                    $adminEmail = AdminSetting::get('admin_email');
+                    if ($adminEmail) {
+                        $transaction->load('page');
+                        Mail::to($adminEmail)->send(new TransactionSuccessNotification($transaction));
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Transaction notification email failed: ' . $e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'status'         => 'success',
+                'payment_status' => $paymentStatus,
+                'data'           => $responseData,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Error checking FastLipa payment status: '.$e->getMessage(),
             ], 500);
         }
     }

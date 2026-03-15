@@ -30,7 +30,9 @@ class PageController extends Controller
     public function create()
     {
         abort_if(Auth::user() && Auth::user()->isSuperAdmin(), 403, 'Super Admins cannot create pages.');
-        return view('dashboard.pages.create');
+        
+        $activeGateways = \App\Models\PaymentGateway::whereNull('user_id')->where('is_active', true)->get();
+        return view('dashboard.pages.create', compact('activeGateways'));
     }
 
     /**
@@ -45,7 +47,7 @@ class PageController extends Controller
             'title' => 'required|string|max:255',
             'template' => 'required|in:template1,template2,custom',
             'price' => 'nullable|numeric|min:0',
-            'payment_gateway' => 'nullable|string|in:sonicpesa,snippe',
+            'payment_gateway' => 'nullable|string|in:sonicpesa,snippe,fastlipa',
         ];
 
         // If custom template, require video
@@ -119,7 +121,8 @@ class PageController extends Controller
     {
         abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
 
-        return view('dashboard.pages.edit', ['page' => $page]);
+        $activeGateways = \App\Models\PaymentGateway::whereNull('user_id')->where('is_active', true)->get();
+        return view('dashboard.pages.edit', compact('page', 'activeGateways'));
     }
 
     /**
@@ -131,7 +134,7 @@ class PageController extends Controller
         $rules = [
             'title' => 'required|string|max:255',
             'price' => 'nullable|numeric|min:0',
-            'payment_gateway' => 'nullable|string|in:sonicpesa,snippe',
+            'payment_gateway' => 'nullable|string|in:sonicpesa,snippe,fastlipa',
         ];
 
         // Only validate video if custom template and video is being uploaded

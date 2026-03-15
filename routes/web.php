@@ -137,7 +137,7 @@ Route::middleware(['auth.custom'])->group(function () {
     // Payment Gateway Settings
     Route::controller(PaymentGatewayController::class)->prefix('payment-gateways')->group(function () {
         Route::get('/', 'index')->name('payment-gateways.index');
-        Route::post('/{gateway}/update', 'update')->name('payment-gateways.update');
+        Route::post('/{name}/update', 'update')->name('payment-gateways.update');
         Route::post('/{gateway}/toggle', 'toggle')->name('payment-gateways.toggle');
     });
 

@@ -224,33 +224,30 @@
             <label class="block text-sm font-medium text-gray-900 mb-4">Payment Gateway</label>
 
             <div class="space-y-3">
-                <!-- SonicPesa -->
+                @forelse($activeGateways as $gateway)
                 <label class="flex items-center p-4 border border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer">
-                    <input type="radio" name="payment_gateway" value="sonicpesa" class="w-4 h-4 text-indigo-600" {{ old('payment_gateway') === 'sonicpesa' || (!old('payment_gateway') && !$errors->any()) ? 'checked' : '' }}>
+                    <input type="radio" name="payment_gateway" value="{{ $gateway->name }}" class="w-4 h-4 text-indigo-600" {{ old('payment_gateway') === $gateway->name || ($loop->first && !old('payment_gateway') && !$errors->any()) ? 'checked' : '' }}>
                     <span class="ml-3 flex items-center space-x-3 flex-1">
+                        @if($gateway->name === 'sonicpesa')
                         <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
                         </svg>
-                        <div>
-                            <p class="font-medium text-gray-900">SonicPesa</p>
-                            <p class="text-xs text-gray-600">Mobile money USSD payment</p>
-                        </div>
-                    </span>
-                </label>
-
-                <!-- Snippe -->
-                <label class="flex items-center p-4 border border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition cursor-pointer">
-                    <input type="radio" name="payment_gateway" value="snippe" class="w-4 h-4 text-indigo-600" {{ old('payment_gateway') === 'snippe' ? 'checked' : '' }}>
-                    <span class="ml-3 flex items-center space-x-3 flex-1">
+                        @elseif($gateway->name === 'snippe')
                         <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
+                        @endif
                         <div>
-                            <p class="font-medium text-gray-900">Snippe</p>
-                            <p class="text-xs text-gray-600">Alternative payment gateway</p>
+                            <p class="font-medium text-gray-900">{{ $gateway->display_name }}</p>
+                            <p class="text-xs text-gray-600">{{ $gateway->description ?? 'Secure mobile payment provider' }}</p>
                         </div>
                     </span>
                 </label>
+                @empty
+                <div class="p-4 bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg text-sm">
+                    No payment gateways are currently active on the platform. Gateways must be configured by an administrator before they can be used.
+                </div>
+                @endforelse
             </div>
         </div>
     </div>

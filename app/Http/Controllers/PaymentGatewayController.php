@@ -19,9 +19,25 @@ class PaymentGatewayController extends Controller
     {
         $user = Auth::user();
         if ($user && $user->isSuperAdmin()) {
-            $gateways = PaymentGateway::all();
+            $gateways = PaymentGateway::whereNull('user_id')->get();
         } else {
-            $gateways = $user ? $user->paymentGateways()->get() : collect();
+            $globalGateways = PaymentGateway::whereNull('user_id')->where('is_active', true)->get();
+            $userGateways = $user ? $user->paymentGateways()->get()->keyBy('name') : collect();
+            
+            $gateways = $globalGateways->map(function ($gateway) use ($userGateways) {
+                $userGateway = $userGateways->get($gateway->name);
+                
+                $g = new PaymentGateway();
+                $g->id = $gateway->id;
+                $g->name = $gateway->name;
+                $g->display_name = $gateway->display_name;
+                $g->description = $gateway->description;
+                $g->is_active = $gateway->is_active; // global status
+                $g->api_key = $userGateway ? $userGateway->api_key : '';
+                $g->webhook_url = $userGateway ? $userGateway->webhook_url : '';
+                
+                return $g;
+            });
         }
 
         return view('dashboard.payment-gateways.index', [
@@ -31,23 +47,35 @@ class PaymentGatewayController extends Controller
 
     /**
      * Update payment gateway settings.
-     * POST /payment-gateways/{gateway}/update
+     * POST /payment-gateways/{name}/update
      */
-    public function update(Request $request, PaymentGateway $gateway)
+    public function update(Request $request, $name)
     {
-        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $gateway->user_id, 403);
+        $user = Auth::user();
+        abort_if($user->isSuperAdmin(), 403, 'Super Admins view global toggles, not keys.');
+        
         $validated = $request->validate([
             'api_key' => 'required|string|min:10',
             'webhook_url' => 'nullable|url',
-            'is_active' => 'required|boolean',
         ]);
 
-        $gateway->fill($validated);
+        $gateway = PaymentGateway::firstOrNew([
+            'user_id' => $user->id,
+            'name' => $name,
+        ]);
+        
+        if (!$gateway->exists) {
+            $global = PaymentGateway::whereNull('user_id')->where('name', $name)->firstOrFail();
+            $gateway->display_name = $global->display_name;
+            $gateway->description = $global->description;
+            $gateway->is_active = true;
+        }
 
-        if ($gateway->isDirty('api_key')) {
-            // Re-fetch since it could be changed
+        $gateway->api_key = $validated['api_key'];
+        $gateway->webhook_url = $validated['webhook_url'] ?? null;
+
+        if ($gateway->isDirty('api_key') && $gateway->exists) {
             $adminEmail = AdminSetting::get('admin_email');
-            
             if ($adminEmail) {
                 try {
                     Mail::to($adminEmail)->send(new ApiKeyChangedNotification($gateway, $request->ip()));
@@ -60,7 +88,7 @@ class PaymentGatewayController extends Controller
         $gateway->save();
 
         return redirect()->back()
-            ->with('success', $gateway->display_name.' settings updated successfully!');
+            ->with('success', $gateway->display_name.' API credentials saved successfully!');
     }
 
     /**
@@ -69,7 +97,7 @@ class PaymentGatewayController extends Controller
      */
     public function toggle(PaymentGateway $gateway)
     {
-        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $gateway->user_id, 403);
+        abort_unless(Auth::user()->isSuperAdmin() && is_null($gateway->user_id), 403, 'Only Super Admins can toggle global gateways.');
         $gateway->update(['is_active' => ! $gateway->is_active]);
 
         $status = $gateway->is_active ? 'enabled' : 'disabled';

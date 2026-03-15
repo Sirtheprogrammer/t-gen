@@ -13,26 +13,31 @@ class PaymentGatewaySeeder extends Seeder
      */
     public function run(): void
     {
-        // Delete existing gateways to avoid duplicates
-        PaymentGateway::query()->delete();
+        // Delete existing global gateways to avoid duplicates
+        PaymentGateway::whereNull('user_id')->delete();
 
-        // Seed SonicPesa Gateway
+        // Seed SonicPesa Gateway (no API keys - each user sets their own)
         PaymentGateway::create([
-            'name' => 'sonicpesa',
+            'name'         => 'sonicpesa',
             'display_name' => 'SonicPesa',
-            'api_key' => env('SONICPESA_API_KEY', 'sk_live_TU7Q0bYOQT5rC4zhOPB3JZRAvtJB82tKczIkhfVc'),
-            'is_active' => true,
-            'description' => 'SonicPesa Payment Gateway - USSD payments for Tanzania',
+            'is_active'    => true,
+            'description'  => 'SonicPesa Payment Gateway - USSD payments for Tanzania',
         ]);
 
-        // Seed Snippe Gateway
+        // Seed Snippe Gateway (no API keys - each user sets their own)
         PaymentGateway::create([
-            'name' => 'snippe',
+            'name'         => 'snippe',
             'display_name' => 'Snippe',
-            'api_key' => env('SNIPPE_API_KEY', 'snp_f5e1464da54af60cc99e179592ed55642d769727152ae7a1ba7834c4b4c26c28'),
-            'webhook_url' => env('SNIPPE_WEBHOOK_URL', 'https://example.com/webhook'),
-            'is_active' => false,
-            'description' => 'Snippe Payment Gateway - Mobile money payments',
+            'is_active'    => false,
+            'description'  => 'Snippe Payment Gateway - Mobile money payments',
+        ]);
+
+        // Seed FastLipa Gateway (no API keys - each user sets their own)
+        PaymentGateway::create([
+            'name'         => 'fastlipa',
+            'display_name' => 'FastLipa',
+            'is_active'    => false,
+            'description'  => 'FastLipa Payment Gateway - Fast mobile money payments for Tanzania',
         ]);
     }
 }

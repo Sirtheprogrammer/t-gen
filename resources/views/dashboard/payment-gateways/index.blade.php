@@ -28,17 +28,24 @@
                                 <h2 class="text-xl font-bold text-white">{{ $gateway->display_name }}</h2>
                                 <p class="text-sm opacity-90 mt-1">{{ $gateway->description }}</p>
                             </div>
+                            @if(auth()->user()->isSuperAdmin())
                             <form action="{{ route('payment-gateways.toggle', $gateway) }}" method="POST" class="inline">
                                 @csrf
                                 <button type="submit" class="px-4 py-2 rounded-lg font-semibold text-sm transition-all {{ $gateway->is_active ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gray-500 hover:bg-gray-600 text-white' }}">
                                     {{ $gateway->is_active ? '✓ Active' : 'Inactive' }}
                                 </button>
                             </form>
+                            @else
+                            <div class="px-4 py-2 rounded-lg font-semibold text-sm transition-all {{ $gateway->is_active ? 'bg-green-500 text-white' : 'bg-gray-500 text-white' }}">
+                                {{ $gateway->is_active ? 'Platform Active' : 'Platform Inactive' }}
+                            </div>
+                            @endif
                         </div>
                     </div>
 
                     <!-- Gateway Form -->
-                    <form action="{{ route('payment-gateways.update', $gateway) }}" method="POST" class="p-6 space-y-5">
+                    @if(!auth()->user()->isSuperAdmin())
+                    <form action="{{ route('payment-gateways.update', $gateway->name) }}" method="POST" class="p-6 space-y-5">
                         @csrf
 
                         <!-- API Key Field -->
@@ -89,9 +96,6 @@
                             </div>
                         @endif
 
-                        <!-- Is Active Hidden Field -->
-                        <input type="hidden" name="is_active" value="{{ $gateway->is_active ? '1' : '0' }}" />
-
                         <!-- Submit Button -->
                         <div class="flex gap-3 pt-4 border-t border-gray-200">
                             <button
@@ -108,11 +112,18 @@
                             </a>
                         </div>
                     </form>
+                    @else
+                    <div class="p-6">
+                        <p class="text-gray-600 text-sm">Users configure their own personal API keys for this gateway.</p>
+                    </div>
+                    @endif
 
                     <!-- Last Updated -->
+                    @if($gateway->updated_at)
                     <div class="px-6 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
                         Last updated: {{ $gateway->updated_at->diffForHumans() }}
                     </div>
+                    @endif
                 </div>
             @empty
                 <div class="col-span-2 bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">

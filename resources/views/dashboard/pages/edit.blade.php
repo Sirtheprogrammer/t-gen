@@ -160,8 +160,11 @@
                     class="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
                 >
                     <option value="">None</option>
-                    <option value="sonicpesa" {{ old('payment_gateway', $page->payment_gateway) === 'sonicpesa' ? 'selected' : '' }}>SonicPesa</option>
-                    <option value="snippe" {{ old('payment_gateway', $page->payment_gateway) === 'snippe' ? 'selected' : '' }}>Snippe</option>
+                    @foreach($activeGateways as $gateway)
+                    <option value="{{ $gateway->name }}" {{ old('payment_gateway', $page->payment_gateway) === $gateway->name ? 'selected' : '' }}>
+                        {{ $gateway->display_name }}
+                    </option>
+                    @endforeach
                 </select>
             </div>
         </div>
