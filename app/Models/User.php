@@ -45,4 +45,29 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === 'super_admin';
+    }
+
+    public function pages()
+    {
+        return $this->hasMany(Page::class);
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(Transaction::class);
+    }
+
+    public function paymentGateways()
+    {
+        return $this->hasMany(PaymentGateway::class);
+    }
+
+    public function settings()
+    {
+        return $this->hasMany(AdminSetting::class);
+    }
 }

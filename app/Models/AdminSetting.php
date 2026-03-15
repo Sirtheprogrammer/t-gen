@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class AdminSetting extends Model
 {
-    protected $fillable = ['key', 'value'];
+    protected $fillable = ['user_id', 'key', 'value'];
 
     /**
      * Get a setting value by key.
@@ -24,5 +24,10 @@ class AdminSetting extends Model
     public static function set(string $key, mixed $value): void
     {
         static::updateOrCreate(['key' => $key], ['value' => $value]);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\AdminSetting;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use App\Models\User;
 
 class SettingsController extends Controller
 {
@@ -14,7 +16,7 @@ class SettingsController extends Controller
     public function index()
     {
         return view('dashboard.settings.index', [
-            'adminEmail' => AdminSetting::get('admin_email', 'admin@example.com'),
+            'adminEmail' => Auth::user()->email,
         ]);
     }
 
@@ -24,17 +26,28 @@ class SettingsController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'admin_email'    => 'required|email|max:255',
-            'new_password'   => 'nullable|string|min:8|confirmed',
-        ]);
+        if ($request->has('allow_self_registration')) {
+            $validated = $request->validate([
+                'allow_self_registration' => 'required|in:0,1',
+            ]);
+            AdminSetting::set('allow_self_registration', $validated['allow_self_registration']);
+        }
 
-        // Save admin email
-        AdminSetting::set('admin_email', $validated['admin_email']);
+        if ($request->has('admin_email')) {
+            $validated = $request->validate([
+                'admin_email'    => 'required|email|max:255|unique:users,email,'.Auth::id(),
+                'new_password'   => 'nullable|string|min:8|confirmed',
+            ]);
 
-        // Save new password if provided
-        if (! empty($validated['new_password'])) {
-            AdminSetting::set('admin_password', Hash::make($validated['new_password']));
+            $user = Auth::user();
+            $user->email = $validated['admin_email'];
+            if (! empty($validated['new_password'])) {
+                $user->password = Hash::make($validated['new_password']);
+            }
+            $user->save();
+
+            // Sync global notification email to AdminSetting
+            AdminSetting::set('admin_email', $validated['admin_email']);
         }
 
         return redirect()->route('settings.index')

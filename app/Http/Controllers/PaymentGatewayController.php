@@ -6,6 +6,7 @@ use App\Mail\ApiKeyChangedNotification;
 use App\Models\AdminSetting;
 use App\Models\PaymentGateway;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
 class PaymentGatewayController extends Controller
@@ -16,7 +17,12 @@ class PaymentGatewayController extends Controller
      */
     public function index()
     {
-        $gateways = PaymentGateway::all();
+        $user = Auth::user();
+        if ($user && $user->isSuperAdmin()) {
+            $gateways = PaymentGateway::all();
+        } else {
+            $gateways = $user ? $user->paymentGateways()->get() : collect();
+        }
 
         return view('dashboard.payment-gateways.index', [
             'gateways' => $gateways,
@@ -29,6 +35,7 @@ class PaymentGatewayController extends Controller
      */
     public function update(Request $request, PaymentGateway $gateway)
     {
+        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $gateway->user_id, 403);
         $validated = $request->validate([
             'api_key' => 'required|string|min:10',
             'webhook_url' => 'nullable|url',
@@ -62,6 +69,7 @@ class PaymentGatewayController extends Controller
      */
     public function toggle(PaymentGateway $gateway)
     {
+        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $gateway->user_id, 403);
         $gateway->update(['is_active' => ! $gateway->is_active]);
 
         $status = $gateway->is_active ? 'enabled' : 'disabled';

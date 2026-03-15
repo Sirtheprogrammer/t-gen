@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Transaction extends Model
 {
     protected $fillable = [
+        'user_id',
         'page_id',
         'order_id',
         'reference',
@@ -36,5 +37,10 @@ class Transaction extends Model
     public function page()
     {
         return $this->belongsTo(Page::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

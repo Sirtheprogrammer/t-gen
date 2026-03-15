@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Page;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 
 class PageController extends Controller
@@ -13,7 +14,12 @@ class PageController extends Controller
      */
     public function index()
     {
-        $pages = Page::all();
+        $user = Auth::user();
+        if ($user && $user->isSuperAdmin()) {
+            $pages = Page::all();
+        } else {
+            $pages = $user ? $user->pages()->get() : collect();
+        }
 
         return view('dashboard.pages.index', ['pages' => $pages]);
     }
@@ -23,6 +29,7 @@ class PageController extends Controller
      */
     public function create()
     {
+        abort_if(Auth::user() && Auth::user()->isSuperAdmin(), 403, 'Super Admins cannot create pages.');
         return view('dashboard.pages.create');
     }
 
@@ -31,6 +38,8 @@ class PageController extends Controller
      */
     public function store(Request $request)
     {
+        abort_if(Auth::user() && Auth::user()->isSuperAdmin(), 403, 'Super Admins cannot create pages.');
+
         // Validate based on template type
         $rules = [
             'title' => 'required|string|max:255',
@@ -65,6 +74,8 @@ class PageController extends Controller
             $validated['video_path'] = $videoPath;
         }
 
+        $validated['user_id'] = Auth::id();
+
         Page::create($validated);
 
         return redirect('/pages')->with('success', 'Page created successfully! Access it at: /'.$slug);
@@ -75,6 +86,8 @@ class PageController extends Controller
      */
     public function destroy(Page $page)
     {
+        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
+
         // Delete uploaded video if exists
         if ($page->video_path && \Storage::disk('public')->exists($page->video_path)) {
             \Storage::disk('public')->delete($page->video_path);
@@ -90,6 +103,8 @@ class PageController extends Controller
      */
     public function toggle(Page $page)
     {
+        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
+
         $page->update(['is_active' => ! $page->is_active]);
 
         $status = $page->is_active ? 'activated' : 'deactivated';
@@ -102,6 +117,8 @@ class PageController extends Controller
      */
     public function edit(Page $page)
     {
+        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
+
         return view('dashboard.pages.edit', ['page' => $page]);
     }
 
@@ -110,6 +127,7 @@ class PageController extends Controller
      */
     public function update(Request $request, Page $page)
     {
+        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
         $rules = [
             'title' => 'required|string|max:255',
             'price' => 'nullable|numeric|min:0',

@@ -27,5 +27,8 @@ class DatabaseSeeder extends Seeder
 
         // Seed Admin Credentials
         $this->call(AdminCredentialSeeder::class);
+
+        // Seed Super Admin Role
+        $this->call(SuperAdminSeeder::class);
     }
 }

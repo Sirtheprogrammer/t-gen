@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class PaymentGateway extends Model
 {
     protected $fillable = [
+        'user_id',
         'name',
         'display_name',
         'api_key',
@@ -21,5 +22,10 @@ class PaymentGateway extends Model
         return [
             'is_active' => 'boolean',
         ];
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

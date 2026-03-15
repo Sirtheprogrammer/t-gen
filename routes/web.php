@@ -5,6 +5,7 @@ use App\Http\Controllers\PaymentGatewayController;
 use App\Http\Controllers\SettingsController;
 use App\Mail\AdminLoginNotification;
 use App\Models\AdminSetting;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
@@ -16,20 +17,11 @@ Route::middleware('guest')->group(function () {
     })->name('login');
 
     Route::post('/login', function () {
-        $email    = request('email');
-        $password = request('password');
+        $credentials = request()->only('email', 'password');
 
-        // Load credentials from admin settings
-        $storedEmail    = AdminSetting::get('admin_email', 'admin@example.com');
-        $storedPassword = AdminSetting::get('admin_password', '');
-
-        $emailMatches    = $email === $storedEmail;
-        $passwordMatches = Hash::check($password, $storedPassword);
-
-        if ($emailMatches && $passwordMatches) {
-            session(['admin_authenticated' => true]);
-
+        if (Auth::attempt($credentials)) {
             // Send login notification email (non-blocking)
+            $storedEmail = AdminSetting::where('key', 'admin_email')->whereNull('user_id')->value('value') ?? 'admin@example.com';
             try {
                 Mail::to($storedEmail)->send(
                     new AdminLoginNotification(
@@ -38,26 +30,79 @@ Route::middleware('guest')->group(function () {
                     )
                 );
             } catch (\Exception $e) {
-                // Don't fail the login if the email fails
                 \Log::warning('Login notification email failed: ' . $e->getMessage());
             }
 
             return redirect('/dashboard');
         }
 
-        return back()->withErrors(['password' => 'Invalid credentials']);
+        return back()->withErrors(['email' => 'Invalid credentials']);
     })->name('login.store');
+
+    Route::get('/register', function () {
+        $allowRegistration = AdminSetting::where('key', 'allow_self_registration')->whereNull('user_id')->value('value');
+        if ($allowRegistration !== '1') {
+            abort(404);
+        }
+        return view('auth.register');
+    })->name('register');
+
+    Route::post('/register', function () {
+        $allowRegistration = AdminSetting::where('key', 'allow_self_registration')->whereNull('user_id')->value('value');
+        if ($allowRegistration !== '1') {
+            abort(404);
+        }
+
+        $validated = request()->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = \App\Models\User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+            'role' => 'user',
+        ]);
+
+        Auth::login($user);
+
+        return redirect('/dashboard');
+    })->name('register.store');
 });
 
 // Protected Routes - Dashboard
 Route::middleware(['auth.custom'])->group(function () {
+    // Super Admin Routes
+    Route::prefix('admin/users')->group(function () {
+        Route::get('/', [\App\Http\Controllers\UserController::class, 'index'])->name('users.index');
+        Route::get('/create', [\App\Http\Controllers\UserController::class, 'create'])->name('users.create');
+        Route::post('/', [\App\Http\Controllers\UserController::class, 'store'])->name('users.store');
+        Route::delete('/{user}', [\App\Http\Controllers\UserController::class, 'destroy'])->name('users.destroy');
+    });
+
     // Dashboard
     Route::get('/dashboard', function () {
-        $totalPages    = \App\Models\Page::count();
-        $activePages   = \App\Models\Page::where('is_active', true)->count();
-        $inactivePages = \App\Models\Page::where('is_active', false)->count();
-        $totalRevenue  = \App\Models\Transaction::where('payment_status', 'COMPLETED')->sum('amount');
-        $recentPages   = \App\Models\Page::latest()->take(5)->get();
+        // Scope queries to the authenticated user unless Super Admin
+        $user = Auth::user();
+        if ($user->isSuperAdmin()) {
+            $totalPages    = \App\Models\Page::count();
+            $activePages   = \App\Models\Page::where('is_active', true)->count();
+            $inactivePages = \App\Models\Page::where('is_active', false)->count();
+            $totalRevenue  = \App\Models\Transaction::where('payment_status', 'COMPLETED')
+                                ->orWhere('payment_status', 'completed')
+                                ->sum('amount');
+            $recentPages   = \App\Models\Page::latest()->take(5)->get();
+        } else {
+            $totalPages    = $user->pages()->count();
+            $activePages   = $user->pages()->where('is_active', true)->count();
+            $inactivePages = $user->pages()->where('is_active', false)->count();
+            $totalRevenue  = $user->transactions()->where('payment_status', 'COMPLETED')
+                                ->orWhere('payment_status', 'completed')
+                                ->sum('amount');
+            $recentPages   = $user->pages()->latest()->take(5)->get();
+        }
 
         return view('dashboard.index', [
             'totalPages'    => $totalPages,
@@ -104,7 +149,9 @@ Route::middleware(['auth.custom'])->group(function () {
 
     // Logout
     Route::post('/logout', function () {
-        session()->forget('admin_authenticated');
+        Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
 
         return redirect('/login');
     })->name('logout');
@@ -121,7 +168,7 @@ Route::get('/{page}', [PageController::class, 'show'])->where('page', '[a-z0-9-]
 
 // Root redirect
 Route::get('/', function () {
-    if (session('admin_authenticated')) {
+    if (Auth::check()) {
         return redirect('/dashboard');
     }
 

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Page extends Model
 {
     protected $fillable = [
+        'user_id',
         'title',
         'slug',
         'template',
@@ -24,5 +25,10 @@ class Page extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

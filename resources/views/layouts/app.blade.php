@@ -37,12 +37,14 @@
                     <span>Manage Pages</span>
                 </a>
 
+                @if(!auth()->user()->isSuperAdmin())
                 <a href="/pages/create" wire:navigate class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors {{ request()->is('pages/create') ? 'text-gray-100 bg-indigo-600' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
                     <span>Create New Page</span>
                 </a>
+                @endif
 
                 <a href="/templates" wire:navigate class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors {{ request()->is('templates') ? 'text-gray-100 bg-indigo-600' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,6 +60,14 @@
                     <span>Payment Gateways</span>
                 </a>
 
+                @if(auth()->user()->isSuperAdmin())
+                <a href="/admin/users" wire:navigate class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors {{ request()->is('admin/users*') ? 'text-gray-100 bg-indigo-600' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span>Users</span>
+                </a>
+
                 <a href="/settings" wire:navigate class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors {{ request()->is('settings') ? 'text-gray-100 bg-indigo-600' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -65,6 +75,7 @@
                     </svg>
                     <span>Settings</span>
                 </a>
+                @endif
             </nav>
 
             <!-- Logout Button -->
@@ -115,12 +126,14 @@
                     </svg>
                     <span>Manage Pages</span>
                 </a>
+                @if(!auth()->user()->isSuperAdmin())
                 <a href="/pages/create" wire:navigate onclick="closeMobileSidebar()" class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors {{ request()->is('pages/create') ? 'text-gray-100 bg-indigo-600 font-medium' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
                     </svg>
                     <span>Create New Page</span>
                 </a>
+                @endif
                 <a href="/templates" wire:navigate onclick="closeMobileSidebar()" class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors {{ request()->is('templates') ? 'text-gray-100 bg-indigo-600 font-medium' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.5a2 2 0 00-1 3.75A2 2 0 0010 19h-3z"></path>
@@ -133,6 +146,14 @@
                     </svg>
                     <span>Payment Gateways</span>
                 </a>
+                @if(auth()->user()->isSuperAdmin())
+                <a href="/admin/users" wire:navigate onclick="closeMobileSidebar()" class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors {{ request()->is('admin/users*') ? 'text-gray-100 bg-indigo-600 font-medium' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800' }}">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span>Users</span>
+                </a>
+
                 <a href="/settings" wire:navigate onclick="closeMobileSidebar()" class="flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors {{ request()->is('settings') ? 'text-gray-100 bg-indigo-600 font-medium' : 'text-gray-400 hover:text-gray-100 hover:bg-gray-800' }}">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
@@ -140,6 +161,7 @@
                     </svg>
                     <span>Settings</span>
                 </a>
+                @endif
             </nav>
 
             <div class="px-4 py-6 border-t border-gray-800">
@@ -188,8 +210,8 @@
                                 <span class="text-indigo-600 font-semibold text-xs sm:text-sm">AD</span>
                             </div>
                             <div class="hidden sm:block">
-                                <p class="text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">Admin User</p>
-                                <p class="text-xs text-gray-600 whitespace-nowrap">Administrator</p>
+                                <p class="text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">{{ auth()->user()->name }}</p>
+                                <p class="text-xs text-gray-600 whitespace-nowrap">{{ auth()->user()->isSuperAdmin() ? 'Administrator' : 'User' }}</p>
                             </div>
                         </div>
                     </div>

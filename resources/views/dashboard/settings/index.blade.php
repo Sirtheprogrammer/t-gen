@@ -110,6 +110,32 @@
             </div>
         </div>
 
+        {{-- Super Admin Only settings --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-bold text-gray-900 mb-4">Registration Settings</h2>
+            <form method="POST" action="{{ route('settings.store') }}" class="space-y-5">
+                @csrf
+                <div class="flex items-center justify-between p-4 border border-gray-100 rounded-lg bg-gray-50">
+                    <div>
+                        <p class="font-medium text-gray-900 text-sm">Allow Public Registration</p>
+                        <p class="text-xs text-gray-500">Enable this if you want visitors to be able to register new accounts themselves.</p>
+                    </div>
+                    @php
+                        $allowReg = \App\Models\AdminSetting::where('key', 'allow_self_registration')->whereNull('user_id')->value('value');
+                    @endphp
+                    <select name="allow_self_registration" class="border border-gray-300 rounded text-sm p-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <option value="0" {{ $allowReg !== '1' ? 'selected' : '' }}>Disabled</option>
+                        <option value="1" {{ $allowReg === '1' ? 'selected' : '' }}>Enabled</option>
+                    </select>
+                </div>
+                <div class="flex justify-end">
+                    <button type="submit" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition text-sm">
+                        Save Registration Setting
+                    </button>
+                </div>
+            </form>
+        </div>
+
         {{-- Danger Zone --}}
         <div class="bg-red-50 rounded-xl border border-red-200 p-6">
             <h2 class="text-lg font-bold text-red-900 mb-6">Danger Zone</h2>
