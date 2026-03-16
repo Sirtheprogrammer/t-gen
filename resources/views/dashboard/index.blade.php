@@ -60,7 +60,13 @@
             <div>
                 <p class="text-gray-600 text-sm font-medium">Total Revenue</p>
                 <p class="text-3xl font-bold text-gray-900 mt-2">TZS {{ number_format($totalRevenue, 0) }}</p>
-                <p class="text-green-600 text-xs font-medium mt-2">From completed transactions</p>
+                <p class="text-green-600 text-xs font-medium mt-2">
+                    @if(auth()->user()->isSuperAdmin())
+                        From completed transactions (platform)
+                    @else
+                        From your completed transactions
+                    @endif
+                </p>
             </div>
             <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

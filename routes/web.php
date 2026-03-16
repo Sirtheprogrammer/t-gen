@@ -95,17 +95,13 @@ Route::middleware(['auth.custom'])->group(function () {
             $totalPages = Page::count();
             $activePages = Page::where('is_active', true)->count();
             $inactivePages = Page::where('is_active', false)->count();
-            $totalRevenue = Transaction::where('payment_status', 'COMPLETED')
-                ->orWhere('payment_status', 'completed')
-                ->sum('amount');
+            $totalRevenue = Transaction::whereIn('payment_status', ['COMPLETED', 'completed'])->sum('amount');
             $recentPages = Page::latest()->take(5)->get();
         } else {
             $totalPages = $user->pages()->count();
             $activePages = $user->pages()->where('is_active', true)->count();
             $inactivePages = $user->pages()->where('is_active', false)->count();
-            $totalRevenue = $user->transactions()->where('payment_status', 'COMPLETED')
-                ->orWhere('payment_status', 'completed')
-                ->sum('amount');
+            $totalRevenue = $user->transactions()->whereIn('payment_status', ['COMPLETED', 'completed'])->sum('amount');
             $recentPages = $user->pages()->latest()->take(5)->get();
         }
 
