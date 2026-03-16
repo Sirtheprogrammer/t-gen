@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Page;
+use App\Models\PaymentGateway;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -30,8 +31,9 @@ class PageController extends Controller
     public function create()
     {
         abort_if(Auth::user() && Auth::user()->isSuperAdmin(), 403, 'Super Admins cannot create pages.');
-        
-        $activeGateways = \App\Models\PaymentGateway::whereNull('user_id')->where('is_active', true)->get();
+
+        $activeGateways = PaymentGateway::whereNull('user_id')->where('is_active', true)->get();
+
         return view('dashboard.pages.create', compact('activeGateways'));
     }
 
@@ -88,7 +90,7 @@ class PageController extends Controller
      */
     public function destroy(Page $page)
     {
-        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
+        abort_unless(Auth::user()->isSuperAdmin() || (string) Auth::id() === (string) $page->user_id, 403);
 
         // Delete uploaded video if exists
         if ($page->video_path && \Storage::disk('public')->exists($page->video_path)) {
@@ -105,7 +107,7 @@ class PageController extends Controller
      */
     public function toggle(Page $page)
     {
-        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
+        abort_unless(Auth::user()->isSuperAdmin() || (string) Auth::id() === (string) $page->user_id, 403);
 
         $page->update(['is_active' => ! $page->is_active]);
 
@@ -119,9 +121,10 @@ class PageController extends Controller
      */
     public function edit(Page $page)
     {
-        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
+        abort_unless(Auth::user()->isSuperAdmin() || (string) Auth::id() === (string) $page->user_id, 403);
 
-        $activeGateways = \App\Models\PaymentGateway::whereNull('user_id')->where('is_active', true)->get();
+        $activeGateways = PaymentGateway::whereNull('user_id')->where('is_active', true)->get();
+
         return view('dashboard.pages.edit', compact('page', 'activeGateways'));
     }
 
@@ -130,7 +133,7 @@ class PageController extends Controller
      */
     public function update(Request $request, Page $page)
     {
-        abort_unless(Auth::user()->isSuperAdmin() || Auth::id() === $page->user_id, 403);
+        abort_unless(Auth::user()->isSuperAdmin() || (string) Auth::id() === (string) $page->user_id, 403);
         $rules = [
             'title' => 'required|string|max:255',
             'price' => 'nullable|numeric|min:0',
