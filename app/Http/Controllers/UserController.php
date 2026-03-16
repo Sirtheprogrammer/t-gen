@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
 
 class UserController extends Controller
 {
@@ -21,12 +20,14 @@ class UserController extends Controller
         $users = User::withSum(['transactions' => function ($query) {
             $query->whereIn('payment_status', ['COMPLETED', 'completed']);
         }], 'amount')->get();
+
         return view('dashboard.users.index', compact('users'));
     }
 
     public function create()
     {
         $this->checkSuperAdmin();
+
         return view('dashboard.users.create');
     }
 
@@ -57,6 +58,25 @@ class UserController extends Controller
             return back()->withErrors(['error' => 'Cannot delete yourself.']);
         }
         $user->delete();
+
         return redirect()->route('users.index')->with('success', 'User deleted successfully.');
+    }
+
+    public function updateRole(Request $request, User $user)
+    {
+        $this->checkSuperAdmin();
+
+        if ($user->id === Auth::id()) {
+            return back()->withErrors(['error' => 'You cannot change your own role.']);
+        }
+
+        $validated = $request->validate([
+            'role' => 'required|in:super_admin,user',
+        ]);
+
+        $user->role = $validated['role'];
+        $user->save();
+
+        return redirect()->route('users.index')->with('success', 'User role updated successfully.');
     }
 }

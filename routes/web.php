@@ -84,6 +84,7 @@ Route::middleware(['auth.custom'])->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('users.index');
         Route::get('/create', [UserController::class, 'create'])->name('users.create');
         Route::post('/', [UserController::class, 'store'])->name('users.store');
+        Route::patch('/{user}/role', [UserController::class, 'updateRole'])->name('users.update-role');
         Route::delete('/{user}', [UserController::class, 'destroy'])->name('users.destroy');
     });
 

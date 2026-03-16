@@ -65,9 +65,27 @@
                                 <div class="text-sm font-medium text-gray-900">TZS {{ number_format($user->transactions_sum_amount ?? 0, 0) }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap">
-                                <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $user->isSuperAdmin() ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800' }}">
-                                    {{ $user->isSuperAdmin() ? 'Super Admin' : 'User' }}
-                                </span>
+                                <div class="flex items-center gap-3">
+                                    <span class="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full {{ $user->isSuperAdmin() ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800' }}">
+                                        {{ $user->isSuperAdmin() ? 'Super Admin' : 'User' }}
+                                    </span>
+
+                                    @if(Auth::id() !== $user->id)
+                                        <form action="{{ route('users.update-role', $user) }}" method="POST" class="flex items-center gap-2">
+                                            @csrf
+                                            @method('PATCH')
+
+                                            <select name="role" class="text-xs border border-gray-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                                <option value="user" @selected($user->role === 'user')>User</option>
+                                                <option value="super_admin" @selected($user->role === 'super_admin')>Super Admin</option>
+                                            </select>
+
+                                            <button type="submit" class="text-xs font-semibold text-indigo-600 hover:text-indigo-900 transition-colors">
+                                                Save
+                                            </button>
+                                        </form>
+                                    @endif
+                                </div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 @if(Auth::id() !== $user->id)
