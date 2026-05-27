@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Page;
 use App\Models\PaymentGateway;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class PageController extends Controller
@@ -74,7 +76,7 @@ class PageController extends Controller
 
         // Handle video upload for custom template
         if ($request->input('template') === 'custom' && $request->hasFile('video')) {
-            $videoPath = $request->file('video')->store('videos', 'public');
+            $videoPath = $request->file('video')->store('videos', $this->pageVideoDiskName());
             $validated['video_path'] = $videoPath;
         }
 
@@ -93,8 +95,8 @@ class PageController extends Controller
         abort_unless(Auth::user()->isSuperAdmin() || (string) Auth::id() === (string) $page->user_id, 403);
 
         // Delete uploaded video if exists
-        if ($page->video_path && \Storage::disk('public')->exists($page->video_path)) {
-            \Storage::disk('public')->delete($page->video_path);
+        if ($page->video_path && $this->pageVideoStorage()->exists($page->video_path)) {
+            $this->pageVideoStorage()->delete($page->video_path);
         }
 
         $page->delete();
@@ -151,10 +153,10 @@ class PageController extends Controller
         // Handle video upload for custom template
         if ($page->template === 'custom' && $request->hasFile('video')) {
             // Delete old video if exists
-            if ($page->video_path && \Storage::disk('public')->exists($page->video_path)) {
-                \Storage::disk('public')->delete($page->video_path);
+            if ($page->video_path && $this->pageVideoStorage()->exists($page->video_path)) {
+                $this->pageVideoStorage()->delete($page->video_path);
             }
-            $videoPath = $request->file('video')->store('videos', 'public');
+            $videoPath = $request->file('video')->store('videos', $this->pageVideoDiskName());
             $validated['video_path'] = $videoPath;
         }
 
@@ -436,7 +438,7 @@ class PageController extends Controller
      */
     private function serveCustomPage(Page $page)
     {
-        $videoUrl = $page->video_path ? asset('storage/'.$page->video_path) : null;
+        $videoUrl = $page->video_path ? $this->pageVideoStorage()->url($page->video_path) : null;
         $price = $page->price ?? 0;
         $gateway = $page->payment_gateway ?? 'stripe';
         $csrfToken = csrf_token();
@@ -987,5 +989,15 @@ HTML;
 
         return response($html)
             ->header('Content-Type', 'text/html; charset=utf-8');
+    }
+
+    private function pageVideoDiskName(): string
+    {
+        return (string) config('filesystems.uploads_disk', 'public');
+    }
+
+    private function pageVideoStorage(): FilesystemAdapter
+    {
+        return Storage::disk($this->pageVideoDiskName());
     }
 }
