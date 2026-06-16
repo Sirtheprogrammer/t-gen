@@ -45,4 +45,9 @@ return [
         'webhook_url' => env('SNIPPE_WEBHOOK_URL', 'https://example.com/webhook'),
     ],
 
+    'mobilipa' => [
+        'api_key' => env('MOBILIPA_API_KEY'),
+        'base_url' => 'https://api.mobilipa.store',
+    ],
+
 ];

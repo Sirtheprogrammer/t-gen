@@ -18,8 +18,10 @@ class PaymentController extends Controller
 
     private const FASTLIPA_API_URL = 'https://api.fastlipa.com/api';
 
+    private const MOBILIPA_API_URL = 'https://api.mobilipa.store';
+
     /**
-     * Create a payment order with gateway (SonicPesa or Snippe).
+     * Create a payment order with gateway (SonicPesa, Snippe, FastLipa, or Mobilipa).
      * POST /api/payments/create-order
      */
     public function createOrder(Request $request)
@@ -52,6 +54,8 @@ class PaymentController extends Controller
             return $this->createSnippeOrder($page, $phone, $validated);
         } elseif ($gateway === 'fastlipa') {
             return $this->createFastLipaOrder($page, $phone, $validated);
+        } elseif ($gateway === 'mobilipa') {
+            return $this->createMobilipaOrder($page, $phone, $validated);
         }
 
         return response()->json([
@@ -380,6 +384,187 @@ class PaymentController extends Controller
     }
 
     /**
+     * Create a Mobilipa payment order
+     */
+    private function createMobilipaOrder(Page $page, string $phone, array $data)
+    {
+        $globalGateway = PaymentGateway::whereNull('user_id')->where('name', 'mobilipa')->first();
+
+        if (! $globalGateway || ! $globalGateway->is_active) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mobilipa gateway is not active on the platform.',
+            ], 400);
+        }
+
+        $userGateway = PaymentGateway::where('user_id', $page->user_id)->where('name', 'mobilipa')->first();
+
+        if (! $userGateway || empty($userGateway->api_key)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The page owner has not configured their Mobilipa API key.',
+            ], 400);
+        }
+
+        $transaction = Transaction::create([
+            'page_id' => $page->id,
+            'buyer_email' => $data['buyer_email'] ?? 'customer@example.com',
+            'buyer_name' => $data['buyer_name'] ?? 'Customer',
+            'buyer_phone' => $phone,
+            'amount' => $page->price,
+            'currency' => 'TZS',
+            'gateway' => 'mobilipa',
+            'payment_status' => 'PENDING',
+            'order_id' => 'pending_'.time(),
+        ]);
+
+        try {
+            $response = Http::withHeaders([
+                'X-API-KEY' => $userGateway->api_key,
+            ])->post(
+                (rtrim($userGateway->base_url ?: self::MOBILIPA_API_URL, '/')).'/v1/payment/create_order',
+                [
+                    'buyer_email' => $transaction->buyer_email,
+                    'buyer_name' => $transaction->buyer_name,
+                    'buyer_phone' => $phone,
+                    'amount' => (int) $page->price,
+                    'currency' => 'TZS',
+                ]
+            );
+
+            if ($response->failed()) {
+                $transaction->update(['payment_status' => 'FAILED']);
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to create payment order',
+                    'error' => $response->json('message'),
+                ], 400);
+            }
+
+            $responseData = $response->json();
+
+            if ($responseData['status'] !== 'success') {
+                $transaction->update(['payment_status' => 'FAILED']);
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $responseData['message'] ?? 'Payment order creation failed',
+                ], 400);
+            }
+
+            $orderId = $responseData['data']['order_id'];
+            $reference = $responseData['data']['reference'] ?? null;
+
+            $transaction->update([
+                'order_id' => $orderId,
+                'reference' => $reference,
+                'transaction_id' => $responseData['data']['transid'] ?? null,
+                'msisdn' => $responseData['data']['msisdn'] ?? $phone,
+                'response_data' => $responseData,
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Payment order created successfully',
+                'data' => [
+                    'transaction_id' => $transaction->id,
+                    'order_id' => $orderId,
+                    'reference' => $reference,
+                    'amount' => $responseData['data']['amount'],
+                    'currency' => $responseData['data']['currency'],
+                ],
+            ]);
+        } catch (\Exception $e) {
+            $transaction->update(['payment_status' => 'FAILED']);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error creating payment order: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Check Mobilipa payment status
+     */
+    private function checkMobilipaStatus(Transaction $transaction)
+    {
+        $transaction->load('page');
+        $userGateway = PaymentGateway::where('user_id', $transaction->page->user_id)->where('name', 'mobilipa')->first();
+
+        if (! $userGateway || empty($userGateway->api_key)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Mobilipa API key not found for the page owner.',
+            ], 400);
+        }
+
+        try {
+            $response = Http::withHeaders([
+                'X-API-KEY' => $userGateway->api_key,
+                'Content-Type' => 'application/json',
+            ])->withBody(json_encode([
+                'order_id' => $transaction->order_id,
+            ]), 'application/json')->get(
+                (rtrim($userGateway->base_url ?: self::MOBILIPA_API_URL, '/')).'/v1/payment/status'
+            );
+
+            if ($response->failed()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to check payment status',
+                    'gateway_response' => $response->json() ?? $response->body(),
+                    'http_status' => $response->status(),
+                ], 400);
+            }
+
+            $responseData = $response->json();
+
+            if ($responseData['status'] !== 'success') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => $responseData['message'] ?? 'Status check failed',
+                ], 400);
+            }
+
+            $paymentStatus = strtoupper($responseData['data']['payment_status'] ?? 'PENDING');
+            $wasAlreadyCompleted = strtoupper($transaction->payment_status) === 'COMPLETED';
+
+            $transaction->update([
+                'payment_status' => $paymentStatus,
+                'transaction_id' => $responseData['data']['transid'] ?? $transaction->transaction_id,
+                'reference' => $responseData['data']['reference'] ?? $transaction->reference,
+                'response_data' => $responseData,
+                'completed_at' => $paymentStatus === 'COMPLETED' ? now() : null,
+            ]);
+
+            if ($paymentStatus === 'COMPLETED' && ! $wasAlreadyCompleted) {
+                try {
+                    $transaction->load('page.user');
+                    $ownerEmail = $transaction->page->user->email ?? null;
+                    if ($ownerEmail) {
+                        Mail::to($ownerEmail)->send(new TransactionSuccessNotification($transaction));
+                    }
+                } catch (\Exception $e) {
+                    \Log::warning('Transaction notification email failed: '.$e->getMessage());
+                }
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'payment_status' => $paymentStatus,
+                'data' => $responseData['data'],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Error checking payment status: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Normalize phone number to Tanzania format (255XXXXXXXXX)
      */
     private function normalizePhoneNumber(string $phone): ?string
@@ -436,6 +621,8 @@ class PaymentController extends Controller
             return $this->checkSnippeStatus($transaction);
         } elseif ($gateway === 'fastlipa') {
             return $this->checkFastLipaStatus($transaction);
+        } elseif ($gateway === 'mobilipa') {
+            return $this->checkMobilipaStatus($transaction);
         }
 
         return response()->json([

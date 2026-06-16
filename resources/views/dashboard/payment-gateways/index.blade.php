@@ -22,7 +22,7 @@
             @forelse ($gateways as $gateway)
                 <div class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden">
                     <!-- Gateway Header -->
-                    <div class="bg-gradient-to-r {{ $gateway->name === 'sonicpesa' ? 'from-red-600 to-red-700' : 'from-blue-600 to-blue-700' }} px-6 py-4">
+                    <div class="bg-gradient-to-r {{ match ($gateway->name) { 'sonicpesa' => 'from-red-600 to-red-700', 'fastlipa' => 'from-emerald-600 to-emerald-700', 'mobilipa' => 'from-lime-600 to-lime-700', default => 'from-blue-600 to-blue-700' } }} px-6 py-4">
                         <div class="flex items-center justify-between">
                             <div>
                                 <h2 class="text-xl font-bold text-white">{{ $gateway->display_name }}</h2>
@@ -48,6 +48,15 @@
                     <form action="{{ route('payment-gateways.update', $gateway->name) }}" method="POST" class="p-6 space-y-5">
                         @csrf
 
+                        @php
+                        $accentColor = match ($gateway->name) {
+                            'sonicpesa' => 'red',
+                            'fastlipa' => 'emerald',
+                            'mobilipa' => 'lime',
+                            default => 'blue',
+                        };
+                        @endphp
+
                         <!-- API Key Field -->
                         <div>
                             <label for="api_key_{{ $gateway->id }}" class="block text-sm font-semibold text-gray-700 mb-2">
@@ -59,7 +68,7 @@
                                     id="api_key_{{ $gateway->id }}"
                                     name="api_key"
                                     value="{{ $gateway->api_key }}"
-                                    class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-{{ $gateway->name === 'sonicpesa' ? 'red' : 'blue' }}-500 focus:border-transparent font-mono text-sm"
+                                    class="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-{{ $accentColor }}-500 focus:border-transparent font-mono text-sm"
                                     placeholder="Enter your API key"
                                     required
                                 />
@@ -100,7 +109,7 @@
                         <div class="flex gap-3 pt-4 border-t border-gray-200">
                             <button
                                 type="submit"
-                                class="flex-1 px-4 py-3 bg-{{ $gateway->name === 'sonicpesa' ? 'red' : 'blue' }}-600 hover:bg-{{ $gateway->name === 'sonicpesa' ? 'red' : 'blue' }}-700 text-white font-semibold rounded-lg transition-all"
+                                class="flex-1 px-4 py-3 bg-{{ $accentColor }}-600 hover:bg-{{ $accentColor }}-700 text-white font-semibold rounded-lg transition-all"
                             >
                                 <i class="fas fa-save mr-2"></i> Save Settings
                             </button>

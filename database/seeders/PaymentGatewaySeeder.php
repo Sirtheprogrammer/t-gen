@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\PaymentGateway;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class PaymentGatewaySeeder extends Seeder
@@ -18,26 +17,35 @@ class PaymentGatewaySeeder extends Seeder
 
         // Seed SonicPesa Gateway (no API keys - each user sets their own)
         PaymentGateway::create([
-            'name'         => 'sonicpesa',
+            'name' => 'sonicpesa',
             'display_name' => 'SonicPesa',
-            'is_active'    => true,
-            'description'  => 'SonicPesa Payment Gateway - USSD payments for Tanzania',
+            'is_active' => true,
+            'description' => 'SonicPesa Payment Gateway - USSD payments for Tanzania',
         ]);
 
         // Seed Snippe Gateway (no API keys - each user sets their own)
         PaymentGateway::create([
-            'name'         => 'snippe',
+            'name' => 'snippe',
             'display_name' => 'Snippe',
-            'is_active'    => false,
-            'description'  => 'Snippe Payment Gateway - Mobile money payments',
+            'is_active' => false,
+            'description' => 'Snippe Payment Gateway - Mobile money payments',
         ]);
 
         // Seed FastLipa Gateway (no API keys - each user sets their own)
         PaymentGateway::create([
-            'name'         => 'fastlipa',
+            'name' => 'fastlipa',
             'display_name' => 'FastLipa',
-            'is_active'    => false,
-            'description'  => 'FastLipa Payment Gateway - Fast mobile money payments for Tanzania',
+            'is_active' => false,
+            'description' => 'FastLipa Payment Gateway - Fast mobile money payments for Tanzania',
+        ]);
+
+        // Seed Mobilipa Gateway (no API keys - each user sets their own)
+        PaymentGateway::create([
+            'name' => 'mobilipa',
+            'display_name' => 'Mobilipa',
+            'is_active' => false,
+            'description' => 'Mobilipa Payment Gateway - Mobile money USSD payments for Tanzania',
+            'base_url' => 'https://api.mobilipa.store',
         ]);
     }
 }
